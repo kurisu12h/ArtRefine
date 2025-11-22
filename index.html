@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ArtRefine AI - 修复版</title>
+    <title>ArtRefine AI - 局部精修版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -13,7 +13,6 @@
             font-family: 'Noto Sans SC', sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
-            /* 防止iOS点击高亮背景 */
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -37,7 +36,6 @@
             position: relative;
         }
         
-        /* 强制让 input 在最上层，保证点击必中 */
         .file-input-overlay {
             position: absolute;
             top: 0;
@@ -46,7 +44,7 @@
             height: 100%;
             opacity: 0;
             cursor: pointer;
-            z-index: 50; /* 提高层级 */
+            z-index: 50;
         }
 
         .loader {
@@ -62,6 +60,20 @@
         
         .fade-in { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Tab Styles */
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        .tab-btn.active {
+            background-color: #4F46E5; /* indigo-600 */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);
+        }
+        .tab-btn:not(.active) {
+            background-color: #F1F5F9; /* slate-100 */
+            color: #64748B; /* slate-500 */
+        }
     </style>
 </head>
 <body class="text-slate-700 p-4 md:p-6 flex flex-col items-center">
@@ -74,7 +86,7 @@
             </div>
             <div>
                 <h1 class="text-xl font-bold text-slate-800">ArtRefine AI</h1>
-                <p class="text-xs text-slate-500">v2.2 修复版</p>
+                <p class="text-xs text-slate-500">v2.3 局部精修版</p>
             </div>
         </div>
         
@@ -88,63 +100,65 @@
     <!-- Main Layout -->
     <main class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-4 z-10 relative">
         
-        <!-- LEFT -->
+        <!-- LEFT: Inputs -->
         <section class="lg:col-span-4 space-y-4 flex flex-col">
             
-            <!-- Upload Main -->
+            <!-- 1. Upload Area -->
             <div class="glass-panel rounded-3xl p-5 relative">
                 <h2 class="text-sm font-bold uppercase text-slate-400 mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-pen-fancy"></i> 1. 上传线稿 (点击下方)
+                    <i class="fa-solid fa-image text-slate-600"></i> 图片上传 (底色/线稿)
                 </h2>
                 
                 <div class="upload-zone min-h-[200px] rounded-2xl flex flex-col items-center justify-center group overflow-hidden">
-                    <!-- 关键修复：直接使用 input 覆盖，移除 JS 点击绑定 -->
                     <input type="file" id="fileInputMain" accept="image/*" class="file-input-overlay">
                     
                     <div id="promptMain" class="text-center p-4 pointer-events-none">
                         <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-3">
                             <i class="fa-solid fa-plus text-xl"></i>
                         </div>
-                        <p class="text-sm font-bold text-slate-600">点击这里上传图片</p>
+                        <p class="text-sm font-bold text-slate-600">点击上传图片</p>
                     </div>
 
                     <img id="previewMain" class="absolute inset-0 w-full h-full object-contain hidden bg-white/90 pointer-events-none">
                     
-                    <!-- 删除按钮在 input 之上 (z-index 60) -->
                     <button id="removeMain" class="absolute top-2 right-2 w-8 h-8 bg-white text-red-500 rounded-full shadow-md hidden z-[60] flex items-center justify-center">
                         <i class="fa-solid fa-times"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Upload Ref -->
-            <div class="glass-panel rounded-3xl p-5 relative">
-                <h2 class="text-sm font-bold uppercase text-slate-400 mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-palette text-pink-500"></i> 2. 风格参考 (可选)
-                </h2>
+            <!-- 2. Mode Selection & Controls -->
+            <div class="glass-panel rounded-3xl p-5 space-y-4">
                 
-                <div class="upload-zone min-h-[120px] rounded-2xl flex flex-col items-center justify-center overflow-hidden border-pink-200">
-                    <input type="file" id="fileInputRef" accept="image/*" class="file-input-overlay">
-                    
-                    <div id="promptRef" class="text-center p-4 pointer-events-none">
-                        <div class="w-10 h-10 bg-pink-50 rounded-full flex items-center justify-center text-pink-400 mx-auto mb-2">
-                            <i class="fa-regular fa-image"></i>
-                        </div>
-                        <p class="text-xs font-bold text-slate-500">上传参考图</p>
-                    </div>
-
-                    <img id="previewRef" class="absolute inset-0 w-full h-full object-cover hidden opacity-90 pointer-events-none">
-                    
-                    <button id="removeRef" class="absolute top-2 right-2 w-7 h-7 bg-white text-red-500 rounded-full shadow-md hidden z-[60] flex items-center justify-center">
-                        <i class="fa-solid fa-times text-xs"></i>
+                <!-- Mode Tabs -->
+                <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                    <button id="tabGlobal" class="tab-btn active py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-globe"></i> 全图细化
+                    </button>
+                    <button id="tabLocal" class="tab-btn py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-bullseye"></i> 局部精修
                     </button>
                 </div>
-            </div>
 
-            <!-- Controls -->
-            <div class="glass-panel rounded-3xl p-5 space-y-3">
-                <input id="stylePrompt" type="text" placeholder="补充描述：如 赛博朋克，暖色调..." 
-                    class="w-full bg-white/60 border border-white/50 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                <!-- Dynamic Inputs -->
+                <div id="controlsArea" class="space-y-3">
+                    
+                    <!-- Local Mode specific input (Hidden by default) -->
+                    <div id="localInputGroup" class="hidden fade-in space-y-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                        <div>
+                            <label class="block text-xs font-bold text-indigo-500 uppercase mb-1">修哪里？(必填)</label>
+                            <input id="targetAreaInput" type="text" placeholder="例如：头发、眼睛、裙子..." 
+                                class="w-full bg-white border border-indigo-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <!-- Common Description -->
+                    <div>
+                        <label id="descLabel" class="block text-xs font-bold text-slate-400 uppercase mb-1">怎么修？(风格/细节)</label>
+                        <input id="stylePrompt" type="text" placeholder="例如：增加高光细节，赛博朋克风..." 
+                            class="w-full bg-white/60 border border-white/50 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
                 
                 <button id="generateBtn" disabled class="w-full py-4 bg-slate-300 text-white rounded-xl font-bold shadow-none flex items-center justify-center gap-2 transition-all z-50">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> <span id="btnText">开始生成</span>
@@ -152,7 +166,7 @@
             </div>
         </section>
 
-        <!-- RIGHT -->
+        <!-- RIGHT: Result -->
         <section class="lg:col-span-8 h-full min-h-[400px] flex flex-col">
             <div class="glass-panel rounded-3xl p-1 flex-1 relative overflow-hidden flex flex-col shadow-xl">
                 <!-- Toolbar -->
@@ -170,12 +184,12 @@
                         <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-indigo-50 text-indigo-300 mb-4">
                             <i class="fa-solid fa-layer-group text-3xl"></i>
                         </div>
-                        <p class="text-sm text-slate-500">请先配置 Key，然后上传线稿</p>
+                        <p class="text-sm text-slate-500">上传已上底色的图片效果更佳</p>
                     </div>
 
                     <div id="loadingState" class="hidden absolute inset-0 bg-white/80 backdrop-blur z-30 flex flex-col items-center justify-center fade-in">
                         <span class="loader mb-4"></span>
-                        <p class="text-sm font-bold text-indigo-600 animate-pulse">AI 正在绘制中...</p>
+                        <p class="text-sm font-bold text-indigo-600 animate-pulse">AI 正在精修中...</p>
                     </div>
 
                     <div id="resultContainer" class="hidden w-full h-full flex items-center justify-center p-2 bg-slate-50/50">
@@ -200,7 +214,6 @@
     </div>
 
     <script>
-        // 移除 type="module" 以增强兼容性，使用 IIFE
         (function() {
             const STORAGE_KEY = 'artrefine_gemini_key';
             const MODEL_NAME = "gemini-2.5-flash-image-preview";
@@ -208,8 +221,8 @@
             const state = {
                 apiKey: localStorage.getItem(STORAGE_KEY) || '',
                 mainImage: null, mainMime: null,
-                refImage: null, refMime: null,
-                isGenerating: false
+                isGenerating: false,
+                mode: 'global' // 'global' or 'local'
             };
 
             const els = {
@@ -223,13 +236,34 @@
                 keyText: document.getElementById('keyStatusText'),
                 
                 inputMain: document.getElementById('fileInputMain'), previewMain: document.getElementById('previewMain'), promptMain: document.getElementById('promptMain'), removeMain: document.getElementById('removeMain'),
-                inputRef: document.getElementById('fileInputRef'), previewRef: document.getElementById('previewRef'), promptRef: document.getElementById('promptRef'), removeRef: document.getElementById('removeRef'),
+                
+                tabGlobal: document.getElementById('tabGlobal'),
+                tabLocal: document.getElementById('tabLocal'),
+                localInputGroup: document.getElementById('localInputGroup'),
+                targetAreaInput: document.getElementById('targetAreaInput'),
                 
                 generateBtn: document.getElementById('generateBtn'), btnText: document.getElementById('btnText'), styleInput: document.getElementById('stylePrompt'),
                 emptyState: document.getElementById('emptyState'), loadingState: document.getElementById('loadingState'), 
                 resultContainer: document.getElementById('resultContainer'), resultImage: document.getElementById('resultImage'), 
                 downloadBtn: document.getElementById('downloadBtn'), compareBtn: document.getElementById('compareBtn')
             };
+
+            // --- UI: Tab Switching ---
+            function switchTab(mode) {
+                state.mode = mode;
+                if (mode === 'global') {
+                    els.tabGlobal.classList.add('active');
+                    els.tabLocal.classList.remove('active');
+                    els.localInputGroup.classList.add('hidden');
+                } else {
+                    els.tabLocal.classList.add('active');
+                    els.tabGlobal.classList.remove('active');
+                    els.localInputGroup.classList.remove('hidden');
+                }
+            }
+            
+            els.tabGlobal.addEventListener('click', () => switchTab('global'));
+            els.tabLocal.addEventListener('click', () => switchTab('local'));
 
             // --- Key Logic ---
             function updateKeyUI() {
@@ -264,8 +298,7 @@
 
             updateKeyUI();
 
-            // --- File Logic (Native Change Event) ---
-            
+            // --- File Logic ---
             function updateGenBtn() {
                 if(state.mainImage && !state.isGenerating) {
                     els.generateBtn.disabled = false;
@@ -276,7 +309,7 @@
                 }
             }
 
-            function handleFileSelect(e, type) {
+            function handleFileSelect(e) {
                 const file = e.target.files[0];
                 if(!file) return;
                 
@@ -285,32 +318,21 @@
                     const base64 = evt.target.result;
                     const data = base64.split(',')[1];
                     
-                    if(type === 'main') {
-                        state.mainImage = data; state.mainMime = file.type;
-                        els.previewMain.src = base64;
-                        els.previewMain.classList.remove('hidden');
-                        els.promptMain.classList.add('hidden'); // 隐藏文字
-                        els.removeMain.classList.remove('hidden'); // 显示删除按钮
-                    } else {
-                        state.refImage = data; state.refMime = file.type;
-                        els.previewRef.src = base64;
-                        els.previewRef.classList.remove('hidden');
-                        els.promptRef.classList.add('hidden');
-                        els.removeRef.classList.remove('hidden');
-                    }
+                    state.mainImage = data; state.mainMime = file.type;
+                    els.previewMain.src = base64;
+                    els.previewMain.classList.remove('hidden');
+                    els.promptMain.classList.add('hidden');
+                    els.removeMain.classList.remove('hidden');
                     updateGenBtn();
                 };
                 reader.readAsDataURL(file);
             }
 
-            // 绑定原生的 change 事件，不搞复杂的 click 模拟
-            els.inputMain.addEventListener('change', (e) => handleFileSelect(e, 'main'));
-            els.inputRef.addEventListener('change', (e) => handleFileSelect(e, 'ref'));
+            els.inputMain.addEventListener('change', handleFileSelect);
 
-            // 删除逻辑
             els.removeMain.addEventListener('click', (e) => {
-                e.preventDefault(); // 防止点到下面的 input
-                els.inputMain.value = ''; // 重置 input
+                e.preventDefault();
+                els.inputMain.value = '';
                 state.mainImage = null;
                 els.previewMain.classList.add('hidden');
                 els.promptMain.classList.remove('hidden');
@@ -318,32 +340,46 @@
                 updateGenBtn();
             });
 
-            els.removeRef.addEventListener('click', (e) => {
-                e.preventDefault();
-                els.inputRef.value = '';
-                state.refImage = null;
-                els.previewRef.classList.add('hidden');
-                els.promptRef.classList.remove('hidden');
-                els.removeRef.classList.add('hidden');
-            });
-
             // --- Generate ---
             els.generateBtn.addEventListener('click', async () => {
-                if(!state.apiKey) return alert("请先点击右上角设置 API Key");
+                if(!state.apiKey) return alert("请先配置 API Key");
+                
+                // Validation for local mode
+                const targetArea = els.targetAreaInput.value.trim();
+                if (state.mode === 'local' && !targetArea) {
+                    alert("请在【修哪里】框中输入你要细化的部位，例如“头发”");
+                    return;
+                }
                 
                 state.isGenerating = true;
                 updateGenBtn();
-                els.btnText.textContent = "绘画中...";
+                els.btnText.textContent = "正在精修...";
                 els.loadingState.classList.remove('hidden');
                 els.emptyState.classList.add('hidden');
                 els.resultContainer.classList.add('hidden');
 
-                const styleText = els.styleInput.value.trim();
+                const userPrompt = els.styleInput.value.trim();
+                
+                // 构建更智能的 Prompt
+                let finalPrompt = "";
+                if (state.mode === 'global') {
+                    finalPrompt = `Task: Refine and colorize this entire image/sketch. 
+                    Goal: Create a high-quality digital art finish. 
+                    User Style Note: ${userPrompt || 'Standard polished style'}.
+                    Constraints: Preserve original composition completely.`;
+                } else {
+                    // 局部精修模式
+                    finalPrompt = `Task: Specific Region Refinement.
+                    **Focus Target**: ${targetArea}.
+                    **Instruction**: Apply detailed refinement, shading, and lighting effects ONLY to the ${targetArea}. 
+                    ${userPrompt ? `Detail Requirements: ${userPrompt}.` : ''}
+                    **Strict Constraint**: Keep the rest of the image (background, other body parts, base colors) as close to the original input as possible. Do not hallucinate new objects. Only enhance the ${targetArea}.`;
+                }
+
                 const parts = [
-                    { text: `Task: You are a digital artist. Input 1: Sketch. ${state.refImage ? 'Input 2: Style Reference.' : ''} Goal: Colorize Input 1 to a high quality finish. ${styleText ? 'User Note: '+styleText : ''} Constraints: Keep input 1 composition exactly.` },
+                    { text: finalPrompt },
                     { inlineData: { mimeType: state.mainMime, data: state.mainImage } }
                 ];
-                if(state.refImage) parts.push({ inlineData: { mimeType: state.refMime, data: state.refImage } });
 
                 try {
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${state.apiKey}`, {
@@ -388,7 +424,7 @@
             els.downloadBtn.addEventListener('click', () => {
                 const a = document.createElement('a');
                 a.href = els.resultImage.src;
-                a.download = `art_${Date.now()}.png`;
+                a.download = `art_refine_${Date.now()}.png`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
