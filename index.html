@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ArtRefine AI - 局部精修版</title>
+    <title>ArtRefine AI - 全能版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -66,13 +66,13 @@
             transition: all 0.3s ease;
         }
         .tab-btn.active {
-            background-color: #4F46E5; /* indigo-600 */
+            background-color: #4F46E5;
             color: white;
             box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);
         }
         .tab-btn:not(.active) {
-            background-color: #F1F5F9; /* slate-100 */
-            color: #64748B; /* slate-500 */
+            background-color: #F1F5F9;
+            color: #64748B;
         }
     </style>
 </head>
@@ -86,7 +86,7 @@
             </div>
             <div>
                 <h1 class="text-xl font-bold text-slate-800">ArtRefine AI</h1>
-                <p class="text-xs text-slate-500">v2.3 局部精修版</p>
+                <p class="text-xs text-slate-500">v2.4 全能版</p>
             </div>
         </div>
         
@@ -103,62 +103,66 @@
         <!-- LEFT: Inputs -->
         <section class="lg:col-span-4 space-y-4 flex flex-col">
             
-            <!-- 1. Upload Area -->
-            <div class="glass-panel rounded-3xl p-5 relative">
-                <h2 class="text-sm font-bold uppercase text-slate-400 mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-image text-slate-600"></i> 图片上传 (底色/线稿)
-                </h2>
-                
-                <div class="upload-zone min-h-[200px] rounded-2xl flex flex-col items-center justify-center group overflow-hidden">
-                    <input type="file" id="fileInputMain" accept="image/*" class="file-input-overlay">
-                    
-                    <div id="promptMain" class="text-center p-4 pointer-events-none">
-                        <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-3">
-                            <i class="fa-solid fa-plus text-xl"></i>
-                        </div>
-                        <p class="text-sm font-bold text-slate-600">点击上传图片</p>
-                    </div>
-
-                    <img id="previewMain" class="absolute inset-0 w-full h-full object-contain hidden bg-white/90 pointer-events-none">
-                    
-                    <button id="removeMain" class="absolute top-2 right-2 w-8 h-8 bg-white text-red-500 rounded-full shadow-md hidden z-[60] flex items-center justify-center">
-                        <i class="fa-solid fa-times"></i>
+            <!-- 1. Mode Tabs -->
+            <div class="glass-panel rounded-2xl p-1">
+                <div class="grid grid-cols-2 gap-1">
+                    <button id="tabGlobal" class="tab-btn active py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-globe"></i> 全图模式
+                    </button>
+                    <button id="tabLocal" class="tab-btn py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-bullseye"></i> 局部精修
                     </button>
                 </div>
             </div>
 
-            <!-- 2. Mode Selection & Controls -->
-            <div class="glass-panel rounded-3xl p-5 space-y-4">
-                
-                <!-- Mode Tabs -->
-                <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
-                    <button id="tabGlobal" class="tab-btn active py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-globe"></i> 全图细化
-                    </button>
-                    <button id="tabLocal" class="tab-btn py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-bullseye"></i> 局部精修
-                    </button>
-                </div>
-
-                <!-- Dynamic Inputs -->
-                <div id="controlsArea" class="space-y-3">
-                    
-                    <!-- Local Mode specific input (Hidden by default) -->
-                    <div id="localInputGroup" class="hidden fade-in space-y-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
-                        <div>
-                            <label class="block text-xs font-bold text-indigo-500 uppercase mb-1">修哪里？(必填)</label>
-                            <input id="targetAreaInput" type="text" placeholder="例如：头发、眼睛、裙子..." 
-                                class="w-full bg-white border border-indigo-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+            <!-- 2. Main Upload -->
+            <div class="glass-panel rounded-3xl p-5 relative">
+                <h2 class="text-sm font-bold uppercase text-slate-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-image text-slate-600"></i> 主图 (线稿/底色)
+                </h2>
+                <div class="upload-zone min-h-[180px] rounded-2xl flex flex-col items-center justify-center group overflow-hidden">
+                    <input type="file" id="fileInputMain" accept="image/*" class="file-input-overlay">
+                    <div id="promptMain" class="text-center p-4 pointer-events-none">
+                        <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-3">
+                            <i class="fa-solid fa-plus text-xl"></i>
                         </div>
+                        <p class="text-sm font-bold text-slate-600">点击上传主图</p>
                     </div>
-
-                    <!-- Common Description -->
-                    <div>
-                        <label id="descLabel" class="block text-xs font-bold text-slate-400 uppercase mb-1">怎么修？(风格/细节)</label>
-                        <input id="stylePrompt" type="text" placeholder="例如：增加高光细节，赛博朋克风..." 
-                            class="w-full bg-white/60 border border-white/50 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
+                    <img id="previewMain" class="absolute inset-0 w-full h-full object-contain hidden bg-white/90 pointer-events-none">
+                    <button id="removeMain" class="absolute top-2 right-2 w-8 h-8 bg-white text-red-500 rounded-full shadow-md hidden z-[60] flex items-center justify-center"><i class="fa-solid fa-times"></i></button>
                 </div>
+            </div>
+
+            <!-- 3. Ref Upload -->
+            <div class="glass-panel rounded-3xl p-5 relative">
+                <h2 class="text-sm font-bold uppercase text-slate-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-palette text-pink-500"></i> 风格参考 (可选)
+                </h2>
+                <div class="upload-zone min-h-[100px] rounded-2xl flex flex-col items-center justify-center border-pink-200 group overflow-hidden">
+                    <input type="file" id="fileInputRef" accept="image/*" class="file-input-overlay">
+                    <div id="promptRef" class="text-center p-4 pointer-events-none">
+                        <div class="w-10 h-10 bg-pink-50 rounded-full flex items-center justify-center text-pink-400 mx-auto mb-2">
+                            <i class="fa-regular fa-image"></i>
+                        </div>
+                        <p class="text-xs font-bold text-slate-500">上传参考图</p>
+                    </div>
+                    <img id="previewRef" class="absolute inset-0 w-full h-full object-cover hidden opacity-90 pointer-events-none">
+                    <button id="removeRef" class="absolute top-2 right-2 w-7 h-7 bg-white text-red-500 rounded-full shadow-md hidden z-[60] flex items-center justify-center"><i class="fa-solid fa-times text-xs"></i></button>
+                </div>
+            </div>
+
+            <!-- 4. Controls -->
+            <div class="glass-panel rounded-3xl p-5 space-y-3">
+                
+                <!-- Local Mode Input (Hidden by default) -->
+                <div id="localInputGroup" class="hidden fade-in">
+                    <label class="block text-xs font-bold text-indigo-500 uppercase mb-1">修哪里？(必填)</label>
+                    <input id="targetAreaInput" type="text" placeholder="例如：头发、眼睛、盔甲..." 
+                        class="w-full bg-indigo-50 border border-indigo-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 mb-2">
+                </div>
+
+                <input id="stylePrompt" type="text" placeholder="补充描述：细节要求、风格..." 
+                    class="w-full bg-white/60 border border-white/50 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
                 
                 <button id="generateBtn" disabled class="w-full py-4 bg-slate-300 text-white rounded-xl font-bold shadow-none flex items-center justify-center gap-2 transition-all z-50">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> <span id="btnText">开始生成</span>
@@ -169,29 +173,20 @@
         <!-- RIGHT: Result -->
         <section class="lg:col-span-8 h-full min-h-[400px] flex flex-col">
             <div class="glass-panel rounded-3xl p-1 flex-1 relative overflow-hidden flex flex-col shadow-xl">
-                <!-- Toolbar -->
                 <div class="absolute top-4 right-4 z-40 flex gap-2">
-                    <button id="compareBtn" class="hidden bg-white/90 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold shadow border border-slate-200">
-                        按住对比
-                    </button>
-                    <button id="downloadBtn" class="hidden bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-2">
-                        <i class="fa-solid fa-download"></i> 保存
-                    </button>
+                    <button id="compareBtn" class="hidden bg-white/90 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold shadow border border-slate-200">按住对比</button>
+                    <button id="downloadBtn" class="hidden bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-2"><i class="fa-solid fa-download"></i> 保存</button>
                 </div>
 
                 <div class="flex-1 rounded-[20px] bg-white/50 overflow-hidden relative flex items-center justify-center border border-white/60 m-1">
                     <div id="emptyState" class="text-center p-4">
-                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-indigo-50 text-indigo-300 mb-4">
-                            <i class="fa-solid fa-layer-group text-3xl"></i>
-                        </div>
-                        <p class="text-sm text-slate-500">上传已上底色的图片效果更佳</p>
+                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-indigo-50 text-indigo-300 mb-4"><i class="fa-solid fa-layer-group text-3xl"></i></div>
+                        <p class="text-sm text-slate-500">上传图片，选择模式，即可开始</p>
                     </div>
-
                     <div id="loadingState" class="hidden absolute inset-0 bg-white/80 backdrop-blur z-30 flex flex-col items-center justify-center fade-in">
                         <span class="loader mb-4"></span>
                         <p class="text-sm font-bold text-indigo-600 animate-pulse">AI 正在精修中...</p>
                     </div>
-
                     <div id="resultContainer" class="hidden w-full h-full flex items-center justify-center p-2 bg-slate-50/50">
                         <img id="resultImage" class="max-w-full max-h-full object-contain shadow-lg rounded-lg">
                     </div>
@@ -221,34 +216,21 @@
             const state = {
                 apiKey: localStorage.getItem(STORAGE_KEY) || '',
                 mainImage: null, mainMime: null,
+                refImage: null, refMime: null,
                 isGenerating: false,
-                mode: 'global' // 'global' or 'local'
+                mode: 'global'
             };
 
             const els = {
-                keyBtn: document.getElementById('openKeyModalBtn'),
-                keyModal: document.getElementById('apiKeyModal'),
-                keyInput: document.getElementById('inputApiKey'),
-                keySave: document.getElementById('saveKeyBtn'),
-                keyClose: document.getElementById('closeModalBtn'),
-                keyBackdrop: document.getElementById('modalBackdrop'),
-                keyDot: document.getElementById('keyStatusDot'),
-                keyText: document.getElementById('keyStatusText'),
-                
+                keyBtn: document.getElementById('openKeyModalBtn'), keyModal: document.getElementById('apiKeyModal'), keyInput: document.getElementById('inputApiKey'), keySave: document.getElementById('saveKeyBtn'), keyClose: document.getElementById('closeModalBtn'), keyBackdrop: document.getElementById('modalBackdrop'), keyDot: document.getElementById('keyStatusDot'), keyText: document.getElementById('keyStatusText'),
                 inputMain: document.getElementById('fileInputMain'), previewMain: document.getElementById('previewMain'), promptMain: document.getElementById('promptMain'), removeMain: document.getElementById('removeMain'),
-                
-                tabGlobal: document.getElementById('tabGlobal'),
-                tabLocal: document.getElementById('tabLocal'),
-                localInputGroup: document.getElementById('localInputGroup'),
-                targetAreaInput: document.getElementById('targetAreaInput'),
-                
+                inputRef: document.getElementById('fileInputRef'), previewRef: document.getElementById('previewRef'), promptRef: document.getElementById('promptRef'), removeRef: document.getElementById('removeRef'),
+                tabGlobal: document.getElementById('tabGlobal'), tabLocal: document.getElementById('tabLocal'), localInputGroup: document.getElementById('localInputGroup'), targetAreaInput: document.getElementById('targetAreaInput'),
                 generateBtn: document.getElementById('generateBtn'), btnText: document.getElementById('btnText'), styleInput: document.getElementById('stylePrompt'),
-                emptyState: document.getElementById('emptyState'), loadingState: document.getElementById('loadingState'), 
-                resultContainer: document.getElementById('resultContainer'), resultImage: document.getElementById('resultImage'), 
-                downloadBtn: document.getElementById('downloadBtn'), compareBtn: document.getElementById('compareBtn')
+                emptyState: document.getElementById('emptyState'), loadingState: document.getElementById('loadingState'), resultContainer: document.getElementById('resultContainer'), resultImage: document.getElementById('resultImage'), downloadBtn: document.getElementById('downloadBtn'), compareBtn: document.getElementById('compareBtn')
             };
 
-            // --- UI: Tab Switching ---
+            // --- UI & Tabs ---
             function switchTab(mode) {
                 state.mode = mode;
                 if (mode === 'global') {
@@ -261,7 +243,6 @@
                     els.localInputGroup.classList.remove('hidden');
                 }
             }
-            
             els.tabGlobal.addEventListener('click', () => switchTab('global'));
             els.tabLocal.addEventListener('click', () => switchTab('local'));
 
@@ -277,16 +258,10 @@
                     els.keyText.className = 'text-xs font-bold text-slate-600';
                 }
             }
-            
-            const toggleModal = (show) => {
-                els.keyModal.classList.toggle('hidden', !show);
-                if(show) els.keyInput.value = state.apiKey;
-            };
-
+            const toggleModal = (show) => { els.keyModal.classList.toggle('hidden', !show); if(show) els.keyInput.value = state.apiKey; };
             els.keyBtn.addEventListener('click', () => toggleModal(true));
             els.keyClose.addEventListener('click', () => toggleModal(false));
             els.keyBackdrop.addEventListener('click', () => toggleModal(false));
-            
             els.keySave.addEventListener('click', () => {
                 const val = els.keyInput.value.trim();
                 if(val.length < 10) return alert("Key 格式似乎不对");
@@ -295,7 +270,6 @@
                 updateKeyUI();
                 toggleModal(false);
             });
-
             updateKeyUI();
 
             // --- File Logic ---
@@ -309,77 +283,81 @@
                 }
             }
 
-            function handleFileSelect(e) {
+            function handleFileSelect(e, type) {
                 const file = e.target.files[0];
                 if(!file) return;
-                
                 const reader = new FileReader();
                 reader.onload = (evt) => {
                     const base64 = evt.target.result;
                     const data = base64.split(',')[1];
-                    
-                    state.mainImage = data; state.mainMime = file.type;
-                    els.previewMain.src = base64;
-                    els.previewMain.classList.remove('hidden');
-                    els.promptMain.classList.add('hidden');
-                    els.removeMain.classList.remove('hidden');
+                    if (type === 'main') {
+                        state.mainImage = data; state.mainMime = file.type;
+                        els.previewMain.src = base64; els.previewMain.classList.remove('hidden');
+                        els.promptMain.classList.add('hidden'); els.removeMain.classList.remove('hidden');
+                    } else {
+                        state.refImage = data; state.refMime = file.type;
+                        els.previewRef.src = base64; els.previewRef.classList.remove('hidden');
+                        els.promptRef.classList.add('hidden'); els.removeRef.classList.remove('hidden');
+                    }
                     updateGenBtn();
                 };
                 reader.readAsDataURL(file);
             }
 
-            els.inputMain.addEventListener('change', handleFileSelect);
+            els.inputMain.addEventListener('change', (e) => handleFileSelect(e, 'main'));
+            els.inputRef.addEventListener('change', (e) => handleFileSelect(e, 'ref'));
 
             els.removeMain.addEventListener('click', (e) => {
-                e.preventDefault();
-                els.inputMain.value = '';
-                state.mainImage = null;
-                els.previewMain.classList.add('hidden');
-                els.promptMain.classList.remove('hidden');
-                els.removeMain.classList.add('hidden');
-                updateGenBtn();
+                e.preventDefault(); els.inputMain.value = ''; state.mainImage = null;
+                els.previewMain.classList.add('hidden'); els.promptMain.classList.remove('hidden');
+                els.removeMain.classList.add('hidden'); updateGenBtn();
+            });
+            els.removeRef.addEventListener('click', (e) => {
+                e.preventDefault(); els.inputRef.value = ''; state.refImage = null;
+                els.previewRef.classList.add('hidden'); els.promptRef.classList.remove('hidden');
+                els.removeRef.classList.add('hidden');
             });
 
             // --- Generate ---
             els.generateBtn.addEventListener('click', async () => {
                 if(!state.apiKey) return alert("请先配置 API Key");
-                
-                // Validation for local mode
                 const targetArea = els.targetAreaInput.value.trim();
-                if (state.mode === 'local' && !targetArea) {
-                    alert("请在【修哪里】框中输入你要细化的部位，例如“头发”");
-                    return;
-                }
+                if (state.mode === 'local' && !targetArea) return alert("局部精修模式必须填写【修哪里】");
                 
                 state.isGenerating = true;
                 updateGenBtn();
-                els.btnText.textContent = "正在精修...";
+                els.btnText.textContent = "正在施法...";
                 els.loadingState.classList.remove('hidden');
                 els.emptyState.classList.add('hidden');
                 els.resultContainer.classList.add('hidden');
 
                 const userPrompt = els.styleInput.value.trim();
-                
-                // 构建更智能的 Prompt
                 let finalPrompt = "";
+
+                // 构建 Prompt
                 if (state.mode === 'global') {
-                    finalPrompt = `Task: Refine and colorize this entire image/sketch. 
-                    Goal: Create a high-quality digital art finish. 
-                    User Style Note: ${userPrompt || 'Standard polished style'}.
-                    Constraints: Preserve original composition completely.`;
+                    finalPrompt = `Task: Global Art Refinement.
+                    Input 1: Base image/sketch. ${state.refImage ? 'Input 2: Style Reference.' : ''}
+                    Goal: Refine Input 1 into a high-quality digital art piece.
+                    ${state.refImage ? 'Instruction: Transfer the style/colors of Input 2 to Input 1.' : ''}
+                    ${userPrompt ? `User Detail Note: ${userPrompt}.` : ''}
+                    Constraint: Maintain original composition/lines.`;
                 } else {
-                    // 局部精修模式
-                    finalPrompt = `Task: Specific Region Refinement.
-                    **Focus Target**: ${targetArea}.
-                    **Instruction**: Apply detailed refinement, shading, and lighting effects ONLY to the ${targetArea}. 
-                    ${userPrompt ? `Detail Requirements: ${userPrompt}.` : ''}
-                    **Strict Constraint**: Keep the rest of the image (background, other body parts, base colors) as close to the original input as possible. Do not hallucinate new objects. Only enhance the ${targetArea}.`;
+                    // 局部模式 + 可选参考图
+                    finalPrompt = `Task: Local Region Refinement.
+                    Input 1: Base image. ${state.refImage ? 'Input 2: Reference image for texture/style.' : ''}
+                    **Target Area**: ${targetArea}.
+                    Action: Refine and enhance ONLY the ${targetArea}.
+                    ${state.refImage ? `Instruction: Make the ${targetArea} look like the corresponding texture/style in Input 2.` : ''}
+                    ${userPrompt ? `Additional details: ${userPrompt}.` : ''}
+                    **Strict Constraint**: DO NOT change anything outside the ${targetArea}. The background and other parts must remain exactly as they are in Input 1.`;
                 }
 
                 const parts = [
                     { text: finalPrompt },
                     { inlineData: { mimeType: state.mainMime, data: state.mainImage } }
                 ];
+                if (state.refImage) parts.push({ inlineData: { mimeType: state.refMime, data: state.refImage } });
 
                 try {
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${state.apiKey}`, {
@@ -390,12 +368,10 @@
                             generationConfig: { responseModalities: ["IMAGE"], temperature: 0.4 }
                         })
                     });
-                    
                     const data = await res.json();
                     if(data.error) throw new Error(data.error.message);
-                    
                     const imgData = data.candidates?.[0]?.content?.parts?.find(p=>p.inlineData)?.inlineData?.data;
-                    if(!imgData) throw new Error("No image returned");
+                    if(!imgData) throw new Error("AI 未返回图片");
                     
                     const url = `data:image/png;base64,${imgData}`;
                     els.resultImage.src = url;
@@ -409,7 +385,6 @@
                         updateGenBtn();
                         els.btnText.textContent = "再次生成";
                     };
-
                 } catch(e) {
                     alert("失败: " + e.message);
                     els.loadingState.classList.add('hidden');
@@ -424,20 +399,16 @@
             els.downloadBtn.addEventListener('click', () => {
                 const a = document.createElement('a');
                 a.href = els.resultImage.src;
-                a.download = `art_refine_${Date.now()}.png`;
+                a.download = `art_${Date.now()}.png`;
                 document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                a.click(); document.body.removeChild(a);
             });
-
             const showOri = () => { if(state.mainImage) els.resultImage.src = `data:${state.mainMime};base64,${state.mainImage}`; };
             const showRes = () => { const u = els.resultImage.getAttribute('data-url'); if(u) els.resultImage.src = u; };
-            
             els.compareBtn.addEventListener('touchstart', (e) => { e.preventDefault(); showOri(); });
             els.compareBtn.addEventListener('touchend', (e) => { e.preventDefault(); showRes(); });
             els.compareBtn.addEventListener('mousedown', showOri);
             els.compareBtn.addEventListener('mouseup', showRes);
-
         })();
     </script>
 </body>
