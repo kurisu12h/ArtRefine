@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArtRefine AI - 自由配置版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism Styles */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .glass-modal {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+        }
+
+        /* Upload Zone Animations */
+        .upload-zone {
+            transition: all 0.3s ease;
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23CBD5E1' stroke-width='2' stroke-dasharray='8%2c 8' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+        .upload-zone:hover, .upload-zone.drag-over {
+            background-color: rgba(238, 242, 255, 0.8);
+            border-color: #6366f1;
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%236366F1FF' stroke-width='2' stroke-dasharray='8%2c 8' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+        }
+
+        /* Loader */
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #FFF;
+            border-bottom-color: #6366F1;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .fade-in { animation: fadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Blur background when modal is open */
+        body.modal-open main, body.modal-open header {
+            filter: blur(4px);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="text-slate-700 p-4 md:p-6 flex flex-col items-center transition-all duration-300">
+
+    <!-- Header -->
+    <header class="w-full max-w-7xl mb-6 flex justify-between items-center px-2 z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                <i class="fa-solid fa-paintbrush"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-slate-800 tracking-tight">ArtRefine AI</h1>
+                <p class="text-xs text-slate-500">本地配置版 v2.1</p>
+            </div>
+        </div>
+        
+        <!-- Key Manager Button -->
+        <button id="openKeyModalBtn" class="group flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all">
+            <div id="keyStatusDot" class="w-2 h-2 rounded-full bg-red-400 animate-pulse"></div>
+            <span id="keyStatusText" class="text-xs font-medium text-slate-600 group-hover:text-indigo-600">设置 API Key</span>
+            <i class="fa-solid fa-gear text-slate-400 group-hover:text-indigo-500"></i>
+        </button>
+    </header>
+
+    <!-- Main Layout -->
+    <main class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-6 z-0">
+        
+        <!-- LEFT: Controls -->
+        <section class="lg:col-span-4 space-y-4 flex flex-col h-full">
+            
+            <!-- Upload Sketch -->
+            <div class="glass-panel rounded-3xl p-5 flex-1 flex flex-col">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-sm font-bold uppercase tracking-wide text-slate-400 flex items-center gap-2">
+                        <i class="fa-solid fa-pen-fancy text-slate-600"></i> 1. 线稿上传 (必须)
+                    </h2>
+                </div>
+                <div id="dropZoneMain" class="upload-zone relative flex-1 min-h-[200px] rounded-2xl flex flex-col items-center justify-center cursor-pointer group overflow-hidden">
+                    <input type="file" id="fileInputMain" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div id="promptMain" class="text-center p-4 transition-all duration-300 group-hover:scale-105">
+                        <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-3 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
+                            <i class="fa-solid fa-plus text-xl"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-600">点击上传草图</p>
+                    </div>
+                    <img id="previewMain" class="absolute inset-0 w-full h-full object-contain hidden bg-white/90 backdrop-blur-sm" alt="Main Preview">
+                    <button id="removeMain" class="absolute top-2 right-2 w-7 h-7 bg-white text-slate-400 hover:text-red-500 rounded-full shadow-sm hidden z-20 items-center justify-center transition-all hover:scale-110">
+                        <i class="fa-solid fa-times text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Upload Reference -->
+            <div class="glass-panel rounded-3xl p-5 flex-1 flex flex-col">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-sm font-bold uppercase tracking-wide text-slate-400 flex items-center gap-2">
+                        <i class="fa-solid fa-palette text-pink-500"></i> 2. 风格参考 (可选)
+                    </h2>
+                </div>
+                <div id="dropZoneRef" class="upload-zone relative flex-1 min-h-[150px] rounded-2xl flex flex-col items-center justify-center cursor-pointer group overflow-hidden border-pink-200/50 hover:border-pink-400">
+                    <input type="file" id="fileInputRef" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div id="promptRef" class="text-center p-4 transition-all duration-300 group-hover:scale-105">
+                        <div class="w-12 h-12 bg-pink-50 rounded-full flex items-center justify-center text-pink-400 mx-auto mb-3 group-hover:bg-pink-100 transition-colors">
+                            <i class="fa-regular fa-image text-xl"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-600">上传参考图</p>
+                    </div>
+                    <img id="previewRef" class="absolute inset-0 w-full h-full object-cover hidden opacity-90" alt="Ref Preview">
+                    <button id="removeRef" class="absolute top-2 right-2 w-7 h-7 bg-white text-slate-400 hover:text-red-500 rounded-full shadow-sm hidden z-20 items-center justify-center transition-all hover:scale-110">
+                        <i class="fa-solid fa-times text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Settings & Go -->
+            <div class="glass-panel rounded-3xl p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">补充描述</label>
+                    <input id="stylePrompt" type="text" placeholder="例如：赛博朋克，暖色调..." 
+                        class="w-full bg-white/60 border border-white/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm">
+                </div>
+
+                <button id="generateBtn" disabled class="w-full py-4 bg-slate-300 text-white rounded-xl font-bold shadow-none transition-all transform flex items-center justify-center gap-2 cursor-not-allowed group relative overflow-hidden">
+                    <span class="relative z-10 flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> <span id="btnText">开始生成</span>
+                    </span>
+                </button>
+            </div>
+        </section>
+
+        <!-- RIGHT: Result -->
+        <section class="lg:col-span-8 h-full min-h-[600px] flex flex-col">
+            <div class="glass-panel rounded-3xl p-1 flex-1 relative overflow-hidden flex flex-col shadow-xl shadow-indigo-100/50">
+                
+                <div class="absolute top-6 right-6 z-30 flex gap-2">
+                    <button id="compareBtn" class="hidden bg-white/90 backdrop-blur text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:bg-white transition-all border border-slate-100">
+                        <i class="fa-solid fa-eye"></i> 按住对比
+                    </button>
+                    <button id="downloadBtn" class="hidden bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg hover:bg-slate-700 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-download"></i> 下载
+                    </button>
+                </div>
+
+                <div class="flex-1 rounded-[20px] bg-white/50 overflow-hidden relative flex items-center justify-center border border-white/60 m-1">
+                    <div id="emptyState" class="text-center">
+                        <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-indigo-50 text-indigo-300 mb-6">
+                            <i class="fa-solid fa-layer-group text-4xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-slate-600">等待灵感</h3>
+                        <p class="text-sm text-slate-400 mt-2">配置 Key -> 上传 -> 生成</p>
+                    </div>
+                    <div id="loadingState" class="hidden absolute inset-0 bg-white/80 backdrop-blur-md z-40 flex flex-col items-center justify-center fade-in">
+                        <span class="loader mb-6"></span>
+                        <h3 class="text-lg font-bold text-indigo-600 animate-pulse">AI 正在绘画...</h3>
+                    </div>
+                    <div id="resultContainer" class="hidden w-full h-full flex items-center justify-center p-4 bg-slate-50/50">
+                        <img id="resultImage" class="max-w-full max-h-full object-contain shadow-2xl rounded-lg" alt="Result">
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- API KEY MODAL -->
+    <div id="apiKeyModal" class="fixed inset-0 z-50 hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 bg-slate-900/30 backdrop-blur-sm transition-opacity" id="modalBackdrop"></div>
+        <div class="glass-modal w-full max-w-md p-6 rounded-2xl relative z-10 shadow-2xl transform transition-all scale-95 opacity-0" id="modalContent">
+            <h3 class="text-xl font-bold text-slate-800 mb-2">配置 API Key</h3>
+            <p class="text-sm text-slate-500 mb-6">
+                请输入你的 Google Gemini API Key。它将仅保存在你的<b>本地浏览器缓存</b>中，不会发送给任何人。
+            </p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-2">API Key</label>
+                    <div class="relative">
+                        <input type="password" id="inputApiKey" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-mono" placeholder="AIzaSy..." autocomplete="off">
+                        <button id="toggleKeyVis" class="absolute right-3 top-3 text-slate-400 hover:text-indigo-500">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-2">
+                        没有 Key? <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-500 hover:underline">去 Google 获取免费 Key</a>
+                    </p>
+                </div>
+                
+                <div class="flex gap-3 pt-2">
+                    <button id="clearKeyBtn" class="flex-1 py-2.5 border border-slate-200 text-slate-500 rounded-xl text-sm font-medium hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors">
+                        清除 Key
+                    </button>
+                    <button id="saveKeyBtn" class="flex-[2] py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-indigo-300 transition-all">
+                        保存并使用
+                    </button>
+                </div>
+            </div>
+            
+            <button id="closeModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        const STORAGE_KEY = 'artrefine_gemini_key';
+        const MODEL_NAME = "gemini-2.5-flash-image-preview";
+        const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+        // --- State ---
+        const state = {
+            apiKey: localStorage.getItem(STORAGE_KEY) || '',
+            mainImage: null, mainMime: null,
+            refImage: null, refMime: null,
+            isGenerating: false
+        };
+
+        // --- Elements ---
+        const els = {
+            // Key Modal
+            openKeyModalBtn: document.getElementById('openKeyModalBtn'),
+            apiKeyModal: document.getElementById('apiKeyModal'),
+            modalContent: document.getElementById('modalContent'),
+            modalBackdrop: document.getElementById('modalBackdrop'),
+            inputApiKey: document.getElementById('inputApiKey'),
+            saveKeyBtn: document.getElementById('saveKeyBtn'),
+            clearKeyBtn: document.getElementById('clearKeyBtn'),
+            closeModalBtn: document.getElementById('closeModalBtn'),
+            toggleKeyVis: document.getElementById('toggleKeyVis'),
+            keyStatusDot: document.getElementById('keyStatusDot'),
+            keyStatusText: document.getElementById('keyStatusText'),
+
+            // App
+            dropMain: document.getElementById('dropZoneMain'), inputMain: document.getElementById('fileInputMain'), previewMain: document.getElementById('previewMain'), promptMain: document.getElementById('promptMain'), removeMain: document.getElementById('removeMain'),
+            dropRef: document.getElementById('dropZoneRef'), inputRef: document.getElementById('fileInputRef'), previewRef: document.getElementById('previewRef'), promptRef: document.getElementById('promptRef'), removeRef: document.getElementById('removeRef'),
+            generateBtn: document.getElementById('generateBtn'), btnText: document.getElementById('btnText'), styleInput: document.getElementById('stylePrompt'),
+            emptyState: document.getElementById('emptyState'), loadingState: document.getElementById('loadingState'), resultContainer: document.getElementById('resultContainer'), resultImage: document.getElementById('resultImage'), downloadBtn: document.getElementById('downloadBtn'), compareBtn: document.getElementById('compareBtn')
+        };
+
+        // --- API Key Management Logic ---
+        
+        function updateKeyStatus() {
+            if (state.apiKey && state.apiKey.length > 20) {
+                els.keyStatusDot.className = 'w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]';
+                els.keyStatusText.textContent = 'API 已就绪';
+                els.keyStatusText.className = 'text-xs font-medium text-green-600';
+            } else {
+                els.keyStatusDot.className = 'w-2 h-2 rounded-full bg-red-400 animate-pulse';
+                els.keyStatusText.textContent = '设置 API Key';
+                els.keyStatusText.className = 'text-xs font-medium text-slate-600 group-hover:text-indigo-600';
+            }
+        }
+
+        function openModal() {
+            els.inputApiKey.value = state.apiKey;
+            els.apiKeyModal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+            // Simple animation
+            setTimeout(() => {
+                els.modalContent.classList.remove('scale-95', 'opacity-0');
+                els.modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            els.modalContent.classList.remove('scale-100', 'opacity-100');
+            els.modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                els.apiKeyModal.classList.add('hidden');
+                document.body.classList.remove('modal-open');
+            }, 200);
+        }
+
+        els.openKeyModalBtn.addEventListener('click', openModal);
+        els.closeModalBtn.addEventListener('click', closeModal);
+        els.modalBackdrop.addEventListener('click', closeModal);
+
+        els.saveKeyBtn.addEventListener('click', () => {
+            const key = els.inputApiKey.value.trim();
+            if (key.length < 20) {
+                alert("Key 看起来太短了，请检查是否正确复制。");
+                return;
+            }
+            state.apiKey = key;
+            localStorage.setItem(STORAGE_KEY, key);
+            updateKeyStatus();
+            closeModal();
+        });
+
+        els.clearKeyBtn.addEventListener('click', () => {
+            state.apiKey = '';
+            els.inputApiKey.value = '';
+            localStorage.removeItem(STORAGE_KEY);
+            updateKeyStatus();
+        });
+
+        els.toggleKeyVis.addEventListener('click', () => {
+            const type = els.inputApiKey.type === 'password' ? 'text' : 'password';
+            els.inputApiKey.type = type;
+            els.toggleKeyVis.innerHTML = type === 'password' ? '<i class="fa-regular fa-eye"></i>' : '<i class="fa-regular fa-eye-slash"></i>';
+        });
+
+        // Initial Check
+        updateKeyStatus();
+
+
+        // --- Image Logic (Standard) ---
+
+        function updateGenerateButton() {
+            const hasMain = !!state.mainImage;
+            if (hasMain && !state.isGenerating) {
+                els.generateBtn.disabled = false;
+                els.generateBtn.classList.add('bg-indigo-600', 'shadow-lg', 'cursor-pointer');
+                els.generateBtn.classList.remove('bg-slate-300', 'cursor-not-allowed');
+            } else {
+                els.generateBtn.disabled = true;
+                els.generateBtn.classList.remove('bg-indigo-600', 'shadow-lg', 'cursor-pointer');
+                els.generateBtn.classList.add('bg-slate-300', 'cursor-not-allowed');
+            }
+        }
+
+        function handleFile(file, type) {
+            if (!file) return;
+            if (file.size > MAX_FILE_SIZE) { alert("文件过大 (>5MB)"); return; }
+            if (!file.type.startsWith('image/')) { alert("只支持图片"); return; }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64 = e.target.result.split(',')[1];
+                if (type === 'main') {
+                    state.mainImage = base64; state.mainMime = file.type;
+                    els.previewMain.src = e.target.result; els.previewMain.classList.remove('hidden');
+                    els.promptMain.classList.add('hidden'); els.removeMain.classList.remove('hidden');
+                } else {
+                    state.refImage = base64; state.refMime = file.type;
+                    els.previewRef.src = e.target.result; els.previewRef.classList.remove('hidden');
+                    els.promptRef.classList.add('hidden'); els.removeRef.classList.remove('hidden');
+                }
+                updateGenerateButton();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearFile(type) {
+            if (type === 'main') {
+                state.mainImage = null; els.inputMain.value = ''; els.previewMain.classList.add('hidden');
+                els.promptMain.classList.remove('hidden'); els.removeMain.classList.add('hidden');
+            } else {
+                state.refImage = null; els.inputRef.value = ''; els.previewRef.classList.add('hidden');
+                els.promptRef.classList.remove('hidden'); els.removeRef.classList.add('hidden');
+            }
+            updateGenerateButton();
+        }
+
+        // Drag & Drop Bindings
+        [
+            { drop: els.dropMain, input: els.inputMain, type: 'main' },
+            { drop: els.dropRef, input: els.inputRef, type: 'ref' }
+        ].forEach(obj => {
+            obj.drop.addEventListener('click', () => obj.input.click());
+            obj.drop.addEventListener('dragover', (e) => { e.preventDefault(); obj.drop.classList.add('drag-over'); });
+            obj.drop.addEventListener('dragleave', () => obj.drop.classList.remove('drag-over'));
+            obj.drop.addEventListener('drop', (e) => {
+                e.preventDefault(); obj.drop.classList.remove('drag-over');
+                if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0], obj.type);
+            });
+            obj.input.addEventListener('change', () => { if(obj.input.files.length) handleFile(obj.input.files[0], obj.type); });
+        });
+
+        els.removeMain.addEventListener('click', (e) => { e.stopPropagation(); clearFile('main'); });
+        els.removeRef.addEventListener('click', (e) => { e.stopPropagation(); clearFile('ref'); });
+
+        // Compare Features
+        const setImg = (src) => { if(src) els.resultImage.src = src; };
+        els.compareBtn.addEventListener('mousedown', () => state.mainImage && setImg(`data:${state.mainMime};base64,${state.mainImage}`));
+        els.compareBtn.addEventListener('mouseup', () => {
+            const url = els.resultImage.getAttribute('data-result-url');
+            if(url) setImg(url);
+        });
+        // Touch events for mobile
+        els.compareBtn.addEventListener('touchstart', (e) => { e.preventDefault(); state.mainImage && setImg(`data:${state.mainMime};base64,${state.mainImage}`); });
+        els.compareBtn.addEventListener('touchend', (e) => { 
+            e.preventDefault();
+            const url = els.resultImage.getAttribute('data-result-url');
+            if(url) setImg(url);
+        });
+
+
+        // --- Generate Logic ---
+        els.generateBtn.addEventListener('click', async () => {
+            // Check Key First
+            if (!state.apiKey) {
+                openModal();
+                alert("请先配置 API Key");
+                return;
+            }
+
+            state.isGenerating = true;
+            updateGenerateButton();
+            els.btnText.textContent = "生成中...";
+            els.loadingState.classList.remove('hidden');
+            els.emptyState.classList.add('hidden');
+            els.resultContainer.classList.add('hidden');
+            els.downloadBtn.classList.add('hidden');
+            els.compareBtn.classList.add('hidden');
+
+            const textInstruction = els.styleInput.value.trim();
+            const parts = [
+                { text: `Task: You are a digital artist. Input 1 is a sketch. ${state.refImage ? 'Input 2 is a style reference.' : ''} Goal: Render Input 1 into a finished artwork ${state.refImage ? 'matching the style of Input 2' : 'with high quality shading and color'}. Constraints: Keep original composition/pose perfectly. ${textInstruction ? 'User Note: ' + textInstruction : ''}` },
+                { inlineData: { mimeType: state.mainMime, data: state.mainImage } }
+            ];
+            if (state.refImage) parts.push({ inlineData: { mimeType: state.refMime, data: state.refImage } });
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${state.apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ role: "user", parts }],
+                        generationConfig: { responseModalities: ["IMAGE"], temperature: 0.4 }
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error?.message || `API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const outputBase64 = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+                if (!outputBase64) throw new Error("AI 未返回图片");
+
+                const url = `data:image/png;base64,${outputBase64}`;
+                els.resultImage.src = url;
+                els.resultImage.setAttribute('data-result-url', url);
+                
+                els.resultImage.onload = () => {
+                    els.loadingState.classList.add('hidden');
+                    els.resultContainer.classList.remove('hidden');
+                    els.downloadBtn.classList.remove('hidden');
+                    els.compareBtn.classList.remove('hidden');
+                    state.isGenerating = false;
+                    updateGenerateButton();
+                    els.btnText.textContent = "再次生成";
+                };
+
+            } catch (error) {
+                console.error(error);
+                let msg = "生成失败";
+                if (error.message.includes("400") || error.message.includes("KEY")) {
+                    msg = "API Key 无效，请检查设置";
+                    openModal();
+                } else {
+                    msg = "网络错误: " + error.message;
+                }
+                alert(msg);
+                
+                els.loadingState.classList.add('hidden');
+                els.emptyState.classList.remove('hidden');
+                state.isGenerating = false;
+                updateGenerateButton();
+                els.btnText.textContent = "开始生成";
+            }
+        });
+
+        // Download
+        els.downloadBtn.addEventListener('click', () => {
+            const a = document.createElement('a');
+            a.href = els.resultImage.src;
+            a.download = `art_refine_${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+    </script>
+</body>
+</html>
